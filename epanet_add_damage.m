@@ -61,7 +61,7 @@ classdef epanet_add_damage < handle
                 return
             end
             obj.PipeNameID = pipeID;
-            
+
             pipeIndex = obj.Epanet.getLinkIndex(pipeID);
             % pipeDiametersAll = obj.Epanet.getLinkDiameter; % Retrieves the value of all link diameters;
             % pipeDiameter = pipeDiameter(pipeIndex);
@@ -81,15 +81,15 @@ classdef epanet_add_damage < handle
             toNodeCoordinationY = nodeCoordinatesAll{2}(toNodeIndex);
             obj.FromNodeNameID = obj.Epanet.getNodeNameID(fromNodeIndex');
             obj.ToNodeNameID = obj.Epanet.getNodeNameID(toNodeIndex');
-            
+
             obj.NewNode.elevation = (1-rateLength).*fromNodeElevation+rateLength.*toNodeElevation;
             obj.NewNode.coordinationX = (1-rateLength).*fromNodeCoordinationX+rateLength.*toNodeCoordinationX;
             obj.NewNode.coordinationY = (1-rateLength).*fromNodeCoordinationY+rateLength.*toNodeCoordinationY;
-            
+
             obj.NewFromPipe.length = rateLength.*pipeLengths;
             obj.NewFromPipe.diameter = pipeDiameter;
             obj.NewFromPipe.roughnessCoeff = pipeRoughnessCoeff;
-            
+
             obj.NewToPipe.length = (1-rateLength).*pipeLengths;
             obj.NewToPipe.diameter = pipeDiameter;
             obj.NewToPipe.roughnessCoeff = pipeRoughnessCoeff;
@@ -107,7 +107,7 @@ classdef epanet_add_damage < handle
         end
     end
     methods
-        function generatBreakModel_2R2C(obj)
+        function generateBreakModel_2R2C(obj)
             % Two reservoirs are add to simulate a break on a pipe.
             % Two pipes are add to link the two reservoirs with nodes, respectively.
             pipeNumber = numel(obj.PipeNameID);
@@ -116,20 +116,20 @@ classdef epanet_add_damage < handle
                 R2_id = [obj.Prefix_R2,obj.PipeNameID{i}];
                 P1_id = [obj.Prefix_P1,obj.PipeNameID{i}];
                 P2_id = [obj.Prefix_P2,obj.PipeNameID{i}];
-                
+
                 R1_index = obj.Epanet.addNodeReservoir(R1_id);
                 obj.Epanet.setNodeCoordinates(R1_index,[obj.NewNode.coordinationX(i),obj.NewNode.coordinationY(i)]);
                 obj.Epanet.setNodeElevations(R1_index,obj.NewNode.elevation(i));
-                
+
                 R2_index = obj.Epanet.addNodeReservoir(R2_id);
                 obj.Epanet.setNodeCoordinates(R2_index,[obj.NewNode.coordinationX(i),obj.NewNode.coordinationY(i)]);
                 obj.Epanet.setNodeElevations(R2_index,obj.NewNode.elevation(i));
-                
+
                 P1_index = obj.Epanet.addLinkPipeCV(P1_id,obj.FromNodeNameID{i},R1_id);
                 obj.Epanet.setLinkDiameter(P1_index,obj.NewFromPipe.diameter(i));
                 obj.Epanet.setLinkLength(P1_index,obj.NewFromPipe.length(i));
                 obj.Epanet.setLinkRoughnessCoeff(P1_index,obj.NewFromPipe.roughnessCoeff(i));
-                
+
                 P2_index = obj.Epanet.addLinkPipeCV(P2_id,obj.ToNodeNameID{i},R2_id);
                 obj.Epanet.setLinkDiameter(P2_index,obj.NewToPipe.diameter(i));
                 obj.Epanet.setLinkLength(P2_index,obj.NewToPipe.length(i));
@@ -137,7 +137,7 @@ classdef epanet_add_damage < handle
             end
             obj.closePipe;
         end
-        function generatBreakModel_2R2P2C(obj)
+        function generateBreakModel_2R2P2C(obj)
             % Two reservoirs are added to simulate a break on a pipe.
             % Two pipes are added to link the two reservoirs with nodes, respectively.
             % Two dummy nodes are added to link the two reservoirs with
@@ -152,38 +152,38 @@ classdef epanet_add_damage < handle
                 P4_id = [obj.Prefix_P4,obj.PipeNameID{i}];
                 N1_id = [obj.Prefix_N1,obj.PipeNameID{i}];
                 N2_id = [obj.Prefix_N2,obj.PipeNameID{i}];
-                
+
                 R1_index = obj.Epanet.addNodeReservoir(R1_id);
                 obj.Epanet.setNodeCoordinates(R1_index,[obj.NewNode.coordinationX(i),obj.NewNode.coordinationY(i)]);
                 obj.Epanet.setNodeElevations(R1_index,obj.NewNode.elevation(i));
-                
+
                 R2_index = obj.Epanet.addNodeReservoir(R2_id);
                 obj.Epanet.setNodeCoordinates(R2_index,[obj.NewNode.coordinationX(i),obj.NewNode.coordinationY(i)]);
                 obj.Epanet.setNodeElevations(R2_index,obj.NewNode.elevation(i));
-                
+
                 N1_index = obj.Epanet.addNodeJunction(N1_id);
                 obj.Epanet.setNodeCoordinates(N1_index,[obj.NewNode.coordinationX(i),obj.NewNode.coordinationY(i)]);
                 obj.Epanet.setNodeElevations(N1_index,obj.NewNode.elevation(i));
-                
+
                 N2_index = obj.Epanet.addNodeJunction(N2_id);
                 obj.Epanet.setNodeCoordinates(N2_index,[obj.NewNode.coordinationX(i),obj.NewNode.coordinationY(i)]);
                 obj.Epanet.setNodeElevations(N2_index,obj.NewNode.elevation(i));
-                
+
                 P1_index = obj.Epanet.addLinkPipe(P1_id,obj.FromNodeNameID{i},N1_id);
                 obj.Epanet.setLinkDiameter(P1_index,obj.NewFromPipe.diameter(i));
                 obj.Epanet.setLinkLength(P1_index,obj.NewFromPipe.length(i));
                 obj.Epanet.setLinkRoughnessCoeff(P1_index,obj.NewFromPipe.roughnessCoeff(i));
-                
+
                 P2_index = obj.Epanet.addLinkPipe(P2_id,obj.ToNodeNameID{i},N2_id);
                 obj.Epanet.setLinkDiameter(P2_index,obj.NewToPipe.diameter(i));
                 obj.Epanet.setLinkLength(P2_index,obj.NewToPipe.length(i));
                 obj.Epanet.setLinkRoughnessCoeff(P2_index,obj.NewToPipe.roughnessCoeff(i));
-                
+
                 P3_index = obj.Epanet.addLinkPipeCV(P3_id,N1_id,R1_id);
                 obj.Epanet.setLinkDiameter(P3_index,obj.DiameterDefault);
                 obj.Epanet.setLinkLength(P3_index,obj.LengthDefault);
                 obj.Epanet.setLinkRoughnessCoeff(P3_index,obj.RoughnessCoeffDefault);
-                
+
                 P4_index = obj.Epanet.addLinkPipeCV(P4_id,N2_id,R2_id);
                 obj.Epanet.setLinkDiameter(P4_index,obj.DiameterDefault);
                 obj.Epanet.setLinkLength(P4_index,obj.LengthDefault);
@@ -191,7 +191,7 @@ classdef epanet_add_damage < handle
             end
             obj.closePipe;
         end
-        function generatBreakModel_2E2C_A(obj)
+        function generateBreakModel_2E2C_A(obj)
             % Two emitters are add to simulate a break on a pipe.
             % Two pipes with "check valve" are added to link the two emitters with nodes, respectively.
             % The emitter coefficient is calculate as "C*mu*areaLeak".
@@ -207,17 +207,17 @@ classdef epanet_add_damage < handle
                 obj.Epanet.setNodeCoordinates(E1_index,[obj.NewNode.coordinationX(i),obj.NewNode.coordinationY(i)]);
                 obj.Epanet.setNodeElevations(E1_index,obj.NewNode.elevation(i));
                 obj.Epanet.setNodeEmitterCoeff(E1_index,emitterCoeff)
-                
+
                 E2_index = obj.Epanet.addNodeJunction(E2_id);
                 obj.Epanet.setNodeCoordinates(E2_index,[obj.NewNode.coordinationX(i),obj.NewNode.coordinationY(i)]);
                 obj.Epanet.setNodeElevations(E2_index,obj.NewNode.elevation(i));
                 obj.Epanet.setNodeEmitterCoeff(E2_index,emitterCoeff)
-                
+
                 P1_index = obj.Epanet.addLinkPipeCV(P1_id,obj.FromNodeNameID{i},E1_id);
                 obj.Epanet.setLinkDiameter(P1_index,obj.NewFromPipe.diameter(i));
                 obj.Epanet.setLinkLength(P1_index,obj.NewFromPipe.length(i));
                 obj.Epanet.setLinkRoughnessCoeff(P1_index,obj.NewFromPipe.roughnessCoeff(i));
-                
+
                 P2_index = obj.Epanet.addLinkPipeCV(P2_id,obj.ToNodeNameID{i},E2_id);
                 obj.Epanet.setLinkDiameter(P2_index,obj.NewToPipe.diameter(i));
                 obj.Epanet.setLinkLength(P2_index,obj.NewToPipe.length(i));
@@ -225,7 +225,7 @@ classdef epanet_add_damage < handle
             end
             obj.closePipe;
         end
-        function generatBreakModel_2E2P_A(obj)
+        function generateBreakModel_2E2P_A(obj)
             % Two emitters are added to simualte a break on a pipe .
             % Two pipes are added to link the two emitters with nodes, respectively.
             % The emitter coefficient is calculate as "C*mu*areaLeak".
@@ -241,17 +241,17 @@ classdef epanet_add_damage < handle
                 obj.Epanet.setNodeCoordinates(E1_index,[obj.NewNode.coordinationX(i),obj.NewNode.coordinationY(i)]);
                 obj.Epanet.setNodeElevations(E1_index,obj.NewNode.elevation(i));
                 obj.Epanet.setNodeEmitterCoeff(E1_index,emitterCoeff)
-                
+
                 E2_index = obj.Epanet.addNodeJunction(E2_id);
                 obj.Epanet.setNodeCoordinates(E2_index,[obj.NewNode.coordinationX(i),obj.NewNode.coordinationY(i)]);
                 obj.Epanet.setNodeElevations(E2_index,obj.NewNode.elevation(i));
                 obj.Epanet.setNodeEmitterCoeff(E2_index,emitterCoeff)
-                
+
                 P1_index = obj.Epanet.addLinkPipe(P1_id,obj.FromNodeNameID{i},E1_id);
                 obj.Epanet.setLinkDiameter(P1_index,obj.NewFromPipe.diameter(i));
                 obj.Epanet.setLinkLength(P1_index,obj.NewFromPipe.length(i));
                 obj.Epanet.setLinkRoughnessCoeff(P1_index,obj.NewFromPipe.roughnessCoeff(i));
-                
+
                 P2_index = obj.Epanet.addLinkPipe(P2_id,obj.ToNodeNameID{i},E2_id);
                 obj.Epanet.setLinkDiameter(P2_index,obj.NewToPipe.diameter(i));
                 obj.Epanet.setLinkLength(P2_index,obj.NewToPipe.length(i));
@@ -259,7 +259,7 @@ classdef epanet_add_damage < handle
             end
             obj.closePipe;
         end
-        function generatBreakModel_1E2C_A(obj)
+        function generateBreakModel_1E2C_A(obj)
             % One emitter is added to simualte a break on a pipe .
             % Two pipes with check valve are added to link the two emitters with nodes, respectively.
             % The emitter coefficient is calculate as "C*mu*areaLeak".
@@ -276,7 +276,7 @@ classdef epanet_add_damage < handle
             end
             obj.closePipe;
         end
-        function generatBreakModel_1E3C_A(obj)
+        function generateBreakModel_1E3C_A(obj)
             % One emitter is added to simualte a break on a pipe .
             % one dummy node is added to link emitter .
             % Three pipes with check valve are added to link the  emitters with nodes, respectively.
@@ -298,7 +298,7 @@ classdef epanet_add_damage < handle
             end
             obj.closePipe;
         end
-        function generatBreakModel_1E1P2C_A(obj)
+        function generateBreakModel_1E1P2C_A(obj)
             % One emitter is added to simualte a break on a pipe .
             % one dummy node is added to link emitter .
             % Two pipes with chack valve are added to link the dummy node to existed nodes, respectively.
@@ -321,7 +321,7 @@ classdef epanet_add_damage < handle
             end
             obj.closePipe;
         end
-        
+
     end
     methods
         function closePipe(obj)
