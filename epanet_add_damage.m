@@ -5,12 +5,14 @@ classdef epanet_add_damage < handle
     % t.generateBreakModel_2R2P2C;
     % t.saveInpFile('out.inp');
     % t.delete
+    % t.add_leak({'2';'5'},[0.3,0.4,0.3;0.5,0.5,0])
     properties
         Epanet
     end
     properties
         K
         AreaLeak
+        xi % xi: mirroLoss Coefficient
         mu = 0.62
         C = 4427;
         Prefix_R1 = 'R1-'
@@ -51,8 +53,58 @@ classdef epanet_add_damage < handle
             obj.Epanet.unload
         end
     end
+    properties % for leak model
+        EqualDiameter
+    end
     methods
+        function add_leak_and_break(obj,pipeID,rateLength,leakDiameter,damageType)
+            % 1 add leak and break damages on the same pipe
+        end
         function add_leak(obj,pipeID,rateLength,leakDiameter)
+            % 1. retrieve the pipe index by pipeID
+            % 2. calculate the leak damage node number
+            obj.init;
+            if numel(pipeID)~=numel(rateLength(:,1))
+                whos('pipeID')
+                whos('rateLength')
+                disp('error: the pipeID and rateLength are discordant!')
+                return
+            end
+            if sum(rateLength,2)==1
+                
+            end
+            obj.PipeNameID = pipeID;
+            pipeIndex = obj.Epanet.getLinkIndex(pipeID);
+            pipeDiameter = obj.Epanet.getLinkDiameter(pipeIndex); % pipeIndex must be 1*n format;
+            pipeLengths = obj.Epanet.getLinkLength(pipeIndex);
+            pipeRoughnessCoeff = obj.Epanet.getLinkRoughnessCoeff(pipeIndex);
+            pipeNodesIndexAll = obj.Epanet.getLinkNodesIndex; % Retrieve the Indexes of the from/to nodes of all links;
+            fromNodeIndex = pipeNodesIndexAll(pipeIndex,1);
+            toNodeIndex = pipeNodesIndexAll(pipeIndex,2);
+            nodeElevationsAll = obj.Epanet.getNodeElevations;
+            nodeCoordinatesAll = obj.Epanet.getNodeCoordinates;
+            fromNodeElevation = nodeElevationsAll(fromNodeIndex);
+            fromNodeCoordinationX = nodeCoordinatesAll{1}(fromNodeIndex);
+            fromNodeCoordinationY = nodeCoordinatesAll{2}(fromNodeIndex);
+            toNodeElevation = nodeElevationsAll(toNodeIndex);
+            toNodeCoordinationX = nodeCoordinatesAll{1}(toNodeIndex);
+            toNodeCoordinationY = nodeCoordinatesAll{2}(toNodeIndex);
+            obj.FromNodeNameID = obj.Epanet.getNodeNameID(fromNodeIndex');
+            obj.ToNodeNameID = obj.Epanet.getNodeNameID(toNodeIndex');
+
+            obj.NewNode.elevation = (1-rateLength).*fromNodeElevation+rateLength.*toNodeElevation;
+            obj.NewNode.coordinationX = (1-rateLength).*fromNodeCoordinationX+rateLength.*toNodeCoordinationX;
+            obj.NewNode.coordinationY = (1-rateLength).*fromNodeCoordinationY+rateLength.*toNodeCoordinationY;
+
+            obj.NewFromPipe.length = rateLength.*pipeLengths;
+            obj.NewFromPipe.diameter = pipeDiameter;
+            obj.NewFromPipe.roughnessCoeff = pipeRoughnessCoeff;
+
+            obj.NewToPipe.length = (1-rateLength).*pipeLengths;
+            obj.NewToPipe.diameter = pipeDiameter;
+            obj.NewToPipe.roughnessCoeff = pipeRoughnessCoeff;
+            
+            obj.EqualDiameter = leakDiameter;
         end
         function add_break(obj,pipeID,rateLength)
             % 1. retrieve the pipe index by pipeID;
@@ -62,6 +114,7 @@ classdef epanet_add_damage < handle
             % 3.2 retrieve the toNode of the pipe;
             % 3.3 retrieve the elevation of the fromNode and toNode;
             % 3.4 Retrieve the coordination of the fromNode and toNode;
+            obj.init;
             if numel(pipeID)~=numel(rateLength(:,1))
                 whos('pipeID')
                 whos('rateLength')
@@ -114,7 +167,7 @@ classdef epanet_add_damage < handle
             obj.Epanet.saveInputFile(fileName);
         end
     end
-    methods % add  break model
+    methods % add break model
         function generateBreakModel_2R2C(obj)
             % Two reservoirs are add to simulate a break on a pipe.
             % Two pipes are add to link the two reservoirs with nodes, respectively.
@@ -332,8 +385,42 @@ classdef epanet_add_damage < handle
 
     end
     methods % add leak model
-        function generateLeakModel_1R1N1C(obj)
+        function generateLeakModel_1R1N1C2P_A(obj)
             pipeNumber = numel(obj.PipeNameID);
+            for i = 1:pipeNumber
+                R1_id = [obj.Prefix_R1,obj.PipeNameID{i},'L'];
+                N1_id = [obj.Prefix_N1,obj.PipeNameID{i},'L'];
+                P1_id = [obj.Prefix_P1,obj.PipeNameID{i},'L'];
+                P2_id = [obj.Prefix_P2,obj.PipeNameID{i},'L'];
+                P3_id = [obj.Prefix_P3,obj.PipeNameID{i},'L'];
+                
+%                 areaLeak = 0.25*pi*(obj.EqualDiameter(i)*0.001)^2
+                R1_index = obj.Epanet.addNodeReservoir(R1_id);
+                obj.Epanet.setNodeCoordinates(R1_index,[obj.NewNode.coordinationX(i),obj.NewNode.coordinationY(i)]);
+                obj.Epanet.setNodeElevations(R1_index,obj.NewNode.elevation(i));
+                
+                N1_index = obj.Epanet.addNodeJunction(N1_id);
+                obj.Epanet.setNodeCoordinates(N1_index,[obj.NewNode.coordinationX(i),obj.NewNode.coordinationY(i)]);
+                obj.Epanet.setNodeElevations(N1_index,obj.NewNode.elevation(i));
+                
+                P1_index = obj.Epanet.addLinkPipe(P1_id,obj.FromNodeNameID{i},N1_id);
+                obj.Epanet.setLinkDiameter(P1_index,obj.NewFromPipe.diameter(i));
+                obj.Epanet.setLinkLength(P1_index,obj.NewFromPipe.length(i));
+                obj.Epanet.setLinkRoughnessCoeff(P1_index,obj.NewFromPipe.roughnessCoeff(i));
+                
+                P2_index = obj.Epanet.addLinkPipe(P2_id,obj.ToNodeNameID{i},N1_id);
+                obj.Epanet.setLinkDiameter(P2_index,obj.NewToPipe.diameter(i));
+                obj.Epanet.setLinkLength(P2_index,obj.NewToPipe.length(i));
+                obj.Epanet.setLinkRoughnessCoeff(P2_index,obj.NewToPipe.roughnessCoeff(i));
+                
+                P3_index = obj.Epanet.addLinkPipeCV(P3_id,N1_id,R1_id);
+                obj.Epanet.setLinkDiameter(P3_index,obj.EqualDiameter(i));
+                obj.Epanet.setLinkLength(P3_index,obj.LengthDefault);
+                obj.Epanet.setLinkRoughnessCoeff(P3_index,1e6);
+                obj.Epanet.setLinkMinorLossCoeff(P3_index,obj.xi);
+                
+
+            end
             obj.closePipe;
         end
     end
@@ -387,6 +474,11 @@ classdef epanet_add_damage < handle
             obj.Epanet.setLinkLength(index,length);
             obj.Epanet.setLinkDiameter(index,diameter);
             obj.Epanet.setLinkRoughnessCoeff(index,roughnessCoeff);
+        end
+    end
+    methods
+        function xi = get.xi(obj)
+            xi = obj.mu^(-2);
         end
     end
 end
