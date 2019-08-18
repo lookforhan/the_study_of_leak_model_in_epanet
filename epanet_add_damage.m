@@ -1,11 +1,17 @@
 classdef epanet_add_damage < handle
+    % How to run
+    % t = epanet_add_damage('Net03.inp');
+    % t.add_break('1';'2'},[0.5;0.5]);
+    % t.generateBreakModel_2R2P2C;
+    % t.saveInpFile('out.inp');
+    % t.delete
     properties
         Epanet
     end
     properties
         K
         AreaLeak
-        mu = 0.6
+        mu = 0.62
         C = 4427;
         Prefix_R1 = 'R1-'
         Prefix_R2 = 'R2-'
@@ -46,6 +52,8 @@ classdef epanet_add_damage < handle
         end
     end
     methods
+        function add_leak(obj,pipeID,rateLength,leakDiameter)
+        end
         function add_break(obj,pipeID,rateLength)
             % 1. retrieve the pipe index by pipeID;
             % 2. retrieve the pipe diameter, roughnessCoeff and length by pipe index;
@@ -54,7 +62,7 @@ classdef epanet_add_damage < handle
             % 3.2 retrieve the toNode of the pipe;
             % 3.3 retrieve the elevation of the fromNode and toNode;
             % 3.4 Retrieve the coordination of the fromNode and toNode;
-            if numel(pipeID)~=numel(rateLength)
+            if numel(pipeID)~=numel(rateLength(:,1))
                 whos('pipeID')
                 whos('rateLength')
                 disp('error: the pipeID and rate are discordant!')
@@ -106,7 +114,7 @@ classdef epanet_add_damage < handle
             obj.Epanet.saveInputFile(fileName);
         end
     end
-    methods
+    methods % add  break model
         function generateBreakModel_2R2C(obj)
             % Two reservoirs are add to simulate a break on a pipe.
             % Two pipes are add to link the two reservoirs with nodes, respectively.
@@ -322,6 +330,12 @@ classdef epanet_add_damage < handle
             obj.closePipe;
         end
 
+    end
+    methods % add leak model
+        function generateLeakModel_1R1N1C(obj)
+            pipeNumber = numel(obj.PipeNameID);
+            obj.closePipe;
+        end
     end
     methods
         function closePipe(obj)
